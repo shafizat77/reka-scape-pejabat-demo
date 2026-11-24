@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pejabat Maya REKA SCAPE — Demo</title>
+<meta name="description" content="Demo Pejabat Maya REKA SCAPE: 14 staf AI dalam pejabat isometrik pixel.">
+<style>
+  :root { --bg:#1d2430; --panel:#273142; --line:#3c4a60; --text:#e8edf3; --muted:#9fb0c3; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,"Segoe UI",sans-serif; font-size:14px; }
+  header { display:flex; align-items:center; gap:10px; padding:12px 16px; background:#161c26; flex-wrap:wrap; }
+  header h1 { font-size:17px; margin:0; flex:1; min-width:200px; }
+  .pill { background:var(--panel); border:1px solid var(--line); padding:5px 10px; border-radius:999px; font-size:13px; white-space:nowrap; }
+  .demo { background:#5c4520; border-color:#e9c46a; }
+  main { max-width:1200px; margin:0 auto; padding:14px 16px 32px; display:grid; gap:14px; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; overflow:hidden; }
+  #officeWrap { position:relative; background:rgb(6,16,28); }
+  #cv { display:block; width:min(100%, calc(80vh * 16 / 9)); aspect-ratio:16/9; height:auto; margin:0 auto; cursor:pointer; background:rgb(6,16,28); }
+  #tip { position:absolute; pointer-events:none; background:rgba(15,20,28,.95); border:1px solid var(--line); border-radius:8px; padding:8px 10px; font-size:12px; max-width:240px; display:none; z-index:3; }
+  .hint { font-size:12px; color:var(--muted); padding:7px 12px; background:#161c26; }
+  .hint a, footer a { color:#9fd3ff; }
+  #staff { display:grid; grid-template-columns:repeat(auto-fill, minmax(165px,1fr)); gap:8px; padding:14px; }
+  .st { background:#1f2836; border:1px solid var(--line); border-radius:10px; padding:9px 10px; display:flex; gap:9px; }
+  .av { width:28px; height:28px; border-radius:7px; flex:none; display:grid; place-items:center; font-weight:700; color:#fff; }
+  .st .n { font-weight:600; } .st .r, .muted { color:var(--muted); font-size:12px; }
+  .st .s { font-size:12px; margin-top:3px; }
+  .dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:4px; background:#5c6b80; }
+  .sibuk { border-color:#6b5a28; } .sibuk .dot { background:#e9c46a; box-shadow:0 0 6px #e9c46a; }
+  footer { text-align:center; color:var(--muted); font-size:12px; padding:0 16px 24px; line-height:1.6; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🏢 Pejabat Maya REKA SCAPE</h1>
+  <span class="pill demo">🎬 DEMO — aktiviti simulasi</span>
+  <span class="pill">🟡 Sibuk: <b id="nBusy">0</b>/14</span>
+</header>
+<main>
+  <section class="card" id="officeWrap">
+    <canvas id="cv" width="1920" height="1080"></canvas>
+    <div id="tip"></div>
+    <div class="hint">Klik pekerja untuk lihat tugasannya · label kuning = sedang bekerja · Watak pixel:
+      <a href="https://github.com/W17ant/Claude-Office" target="_blank" rel="noopener">Claude Office oleh W17ANT</a> (lesen MIT)</div>
+  </section>
+  <section class="card"><div id="staff"></div></section>
+</main>
+<footer>
+  Ini halaman demo. Staf AI sebenar REKA SCAPE menjawab pelanggan, menulis caption, surat & sebut harga di sistem dalaman.<br>
+  Gambar pejabat dijana khas untuk REKA SCAPE. Watak pixel © W17ANT, lesen MIT.
+</footer>
+
+<script>
+// ---------------------------------------------------------------------------
+// Data demo (tiada AI / server sebenar) - staf bekerja & berehat secara rawak
+// ---------------------------------------------------------------------------
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const STAFF = [
+  ["penyambut","Jasmin","Penyambut","#e76f51"],["website","Adam","Pakar Website","#2a9d8f"],["video","Idris","Pakar Short Video","#e9c46a"],
+  ["perancang_bandar","Nuh","Pakar Perancang Bandar","#264653"],["jualan_online","Lina","Pakar Jualan Online","#f4a261"],
+  ["sewa_rumah","Hana","Pakar Sewa Rumah","#b5838d"],["grafik","Nasuha","Pakar Grafik Design","#9b5de5"],["3d","Hud","Pakar 3D Building","#00a6fb"],
+  ["baju","Luth","Pakar Design Baju","#f15bb5"],["caption","Maryam","Penulis Caption","#06d6a0"],["lead","Ejat","CEO","#ef476f"],
+  ["surat","Sofina","Penulis Surat","#118ab2"],["penasihat","Zahra","Penasihat Bisnes","#8d6e63"],["telegram","Affan","Posmen Telegram","#3a86ff"],
+];
+const TASKS = {
+  penyambut: ["Baca mesej: \"Ada bilik kosong?\"", "Baca mesej: \"Boleh buat logo?\"", "Sambut pelanggan baharu"],
+  website: ["Jawab pelanggan: website kedai online", "Jawab pelanggan: landing page"], video: ["Jawab pelanggan: video TikTok produk"],
+  perancang_bandar: ["Jawab pelanggan: kebenaran merancang"], jualan_online: ["Jawab pelanggan: bila kedai dibuka?"],
+  sewa_rumah: ["Jawab pelanggan: bilik sewa perempuan", "Jawab pelanggan: deposit rumah sewa"], grafik: ["Jawab pelanggan: logo kedai kek"],
+  "3d": ["Jawab pelanggan: render 3D banglo"], baju: ["Jawab pelanggan: 50 helai baju event"],
+  caption: ["Tulis caption: promosi bilik sewa", "Caption harian: Grafik Design"], lead: ["Arahan CEO: agih kerja promosi minggu ini", "Lead baharu: susun mesej susulan"],
+  surat: ["Draf surat sebut harga render 3D"], penasihat: ["Laporan & nasihat harian"], telegram: ["Hantar mesej Telegram"],
+};
+let STATE = { staff: STAFF.map(([id, name, role, color]) => ({ id, name, role, color, state: "rehat", task: "", done_today: 0 })) };
+function render() {
+  $("nBusy").textContent = STATE.staff.filter(s => s.state === "sibuk").length;
+  $("staff").innerHTML = STATE.staff.map(x => `<div class="st ${x.state}"><div class="av" style="background:${x.color}">${esc(x.name[0])}</div>
+    <div><div class="n">${esc(x.name)} <span class="muted">(${x.done_today})</span></div><div class="r">${esc(x.role)}</div>
+    <div class="s"><span class="dot"></span>${x.state === "sibuk" ? esc(x.task) : "Rehat"}</div></div></div>`).join("");
+  if (window.officeIso) window.officeIso.sync();
+}
+function tick() {
+  const idle = STATE.staff.filter(s => s.state === "rehat");
+  if (idle.length && Math.random() < 0.7) {
+    const s = idle[Math.floor(Math.random() * idle.length)], list = TASKS[s.id];
+    s.state = "sibuk"; s.task = list[Math.floor(Math.random() * list.length)];
+    setTimeout(() => { s.state = "rehat"; s.task = ""; s.done_today++; render(); }, 6000 + Math.random() * 12000);
+  }
+  render();
+}
+render(); setInterval(tick, 3000);
+</script>
+<script src="static/pejabat_iso.js"></script>
+</body>
+</html>
